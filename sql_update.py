@@ -1,20 +1,8 @@
 #!/usr/bin/python
 import pika
-import os
+import os, time
 
 routing_key = 'hello'
-tmpdir = '/tmp/inprocess.sql'
-
-class File:
-    def __init__(self):
-        self.inprocess=tmpdir
-        if not os.path.exists(self.inprocess):
-            command="echo '\n' >"+self.inprocess
-            os.system(command)
-    def append(self, text):
-            f = open(self.inprocess, 'a')
-            f.write(text+"\n")
-            f.close()
 
 class RabbitMQQueue:
     def __init__(self):
@@ -28,22 +16,24 @@ class RabbitMQQueue:
         if not queue_len:
             #close BlockingConnection
             self.connection.close()
-            return False
+            return ""
+        time.sleep(0.5)
+        query = ''
         for i in range(queue_len):
             method_frame, header_frame, body = self.channel.basic_get(self.routing_key)
             if method_frame:
-                File().append(body)
+                query = query + body
                 #clear messages from queue
                 self.channel.basic_ack(method_frame.delivery_tag)
             else:
                 print 'No message returned'
         #close BlockingConnection
         self.connection.close()
-        return True
+        return query
+
 if __name__ == "__main__":
-    command = "cat /dev/null > %s"%(tmpdir)
-    os.system(command)
-    if RabbitMQQueue().push_current_query():
-        command = "mysql -uroot -proot monitor -h localhost < %s"%(tmpdir)
+    query = RabbitMQQueue().push_current_query()
+    if query:
+        command = """mysql -uroot -proot monitor -h localhost -e "%s" """%(query)
         os.system(command)
  
