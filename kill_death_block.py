@@ -1,6 +1,7 @@
 import os, sys
 import time
 
+#mysql -u root -p -e "show engine innodb status\G;" | grep 10.0.200.30 > dl.txt 
 def read_file(file_path):
     f = open(file_path, 'r')
     lines=f.read()
